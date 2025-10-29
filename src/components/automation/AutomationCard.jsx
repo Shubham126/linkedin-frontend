@@ -9,7 +9,7 @@ const colorClasses = {
   cyan: 'from-cyan-500 to-cyan-600'
 };
 
-export default function AutomationCard({ automation, onStart }) {
+export default function AutomationCard({ automation, disabled = false, onRefresh }) {
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(false);
@@ -20,19 +20,30 @@ export default function AutomationCard({ automation, onStart }) {
     
     try {
       const response = await automation.action(formData);
-      onStart(response.data.jobId);
       setIsOpen(false);
-      alert(`Automation started! Job ID: ${response.data.jobId}`);
+      
+      alert(`✅ ${response.data.message}\nJob ID: ${response.data.jobId}`);
+      
+      if (onRefresh) onRefresh();
     } catch (error) {
-      alert('Failed to start: ' + error.message);
+      const errorMsg = error.response?.data?.error || error.message;
+      alert(`❌ Failed to start: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleOpen = () => {
+    if (disabled) {
+      alert('⚠️ A job is already running. Please wait or cancel it first.');
+      return;
+    }
+    setIsOpen(true);
+  };
+
   return (
     <>
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
+      <div className={`bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all ${disabled ? 'opacity-50' : ''}`}>
         <div className={`h-24 bg-linear-to-r ${colorClasses[automation.color]} flex items-center justify-center`}>
           <span className="text-6xl">{automation.icon}</span>
         </div>
@@ -46,10 +57,15 @@ export default function AutomationCard({ automation, onStart }) {
           </p>
           
           <button
-            onClick={() => setIsOpen(true)}
-            className={`w-full py-2.5 px-4 rounded-lg text-white font-medium bg-linear-to-r ${colorClasses[automation.color]} hover:opacity-90 transition-opacity`}
+            onClick={handleOpen}
+            disabled={disabled}
+            className={`w-full py-2.5 px-4 rounded-lg text-white font-medium transition-opacity ${
+              disabled 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : `bg-linear-to-r ${colorClasses[automation.color]} hover:opacity-90`
+            }`}
           >
-            Start Automation
+            {disabled ? '🔒 Job Running' : 'Start Automation'}
           </button>
         </div>
       </div>
@@ -71,7 +87,7 @@ export default function AutomationCard({ automation, onStart }) {
                   <input
                     type={input.type}
                     defaultValue={input.default}
-                    onChange={(e) => setFormData({ ...formData, [input.name]: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, [input.name]: input.type === 'number' ? parseInt(e.target.value) : e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
@@ -82,7 +98,8 @@ export default function AutomationCard({ automation, onStart }) {
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="flex-1 py-2.5 px-4 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50"
+                  disabled={loading}
+                  className="flex-1 py-2.5 px-4 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 >
                   Cancel
                 </button>

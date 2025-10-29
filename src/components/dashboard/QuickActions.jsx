@@ -1,8 +1,22 @@
-import { useState } from 'react';
-import { automation } from '../api/linkedinApi';
+import { useState, useEffect } from 'react';
+import { automation } from '../../api/linkedinApi';
 
 export default function QuickActions({ onRefresh }) {
   const [loading, setLoading] = useState({});
+  const [currentJob, setCurrentJob] = useState(null);
+
+  useEffect(() => {
+    checkJobStatus();
+  }, []);
+
+  const checkJobStatus = async () => {
+    try {
+      const response = await automation.getCurrentJobStatus();
+      setCurrentJob(response.data.data);
+    } catch (error) {
+      console.error('Failed to check job status:', error);
+    }
+  };
 
   const actions = [
     {
@@ -36,17 +50,25 @@ export default function QuickActions({ onRefresh }) {
   ];
 
   const handleAction = async (actionId, actionFn) => {
+    if (currentJob?.isRunning) {
+      alert('⚠️ A job is already running. Please wait or cancel it first.');
+      return;
+    }
+
     setLoading(prev => ({ ...prev, [actionId]: true }));
     try {
       const response = await actionFn();
-      alert(`Started! Job ID: ${response.data.jobId}`);
-      onRefresh();
+      alert(`✅ ${response.data.message}`);
+      await checkJobStatus();
+      if (onRefresh) onRefresh();
     } catch (error) {
-      alert('Failed to start automation: ' + error.message);
+      alert(`❌ Failed: ${error.response?.data?.error || error.message}`);
     } finally {
       setLoading(prev => ({ ...prev, [actionId]: false }));
     }
   };
+
+  const isDisabled = currentJob?.isRunning;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200">
@@ -59,8 +81,12 @@ export default function QuickActions({ onRefresh }) {
           <button
             key={action.id}
             onClick={() => handleAction(action.id, action.action)}
-            disabled={loading[action.id]}
-            className="w-full flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading[action.id] || isDisabled}
+            className={`w-full flex items-start gap-3 p-3 rounded-lg border transition-all ${
+              isDisabled 
+                ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-50' 
+                : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+            }`}
           >
             <span className="text-2xl">{action.icon}</span>
             <div className="flex-1 text-left">

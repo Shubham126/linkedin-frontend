@@ -3,6 +3,7 @@ import { analytics } from '../api/linkedinApi';
 import StatsCard from '../components/dashboard/StatsCard';
 import ActivityFeed from '../components/dashboard/ActivityFeed';
 import QuickActions from '../components/dashboard/QuickActions';
+import JobControlPanel from '../components/automation/JobControlPanel'; 
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -31,12 +32,22 @@ export default function Dashboard() {
         connections: connectionRes.data.data,
         engagement: engagementRes.data.data
       });
-      setRecentActivity(recentRes.data.data);
+      setRecentActivity(recentRes.data.data || []);
     } catch (error) {
       console.error('Failed to load dashboard:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const safeNumber = (value, defaultValue = 0) => {
+    const num = Number(value);
+    return isNaN(num) ? defaultValue : num;
+  };
+
+  const formatPercentage = (value) => {
+    const num = safeNumber(value);
+    return `${num.toFixed(1)}%`;
   };
 
   if (loading) {
@@ -58,33 +69,35 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Total Activities"
-          value={stats.activity?.total || 0}
+          value={safeNumber(stats.activity?.total)}
           icon="📊"
           trend="+12%"
           trendUp={true}
         />
         <StatsCard
           title="Connections"
-          value={stats.connections?.total || 0}
+          value={safeNumber(stats.connections?.total)}
           icon="👥"
           trend="+8%"
           trendUp={true}
         />
         <StatsCard
           title="Engagement Rate"
-          value={`${(stats.engagement?.engagementRate || 0).toFixed(1)}%`}
+          value={formatPercentage(stats.engagement?.engagementRate)}
           icon="❤️"
           trend="+5%"
           trendUp={true}
         />
         <StatsCard
           title="Pending"
-          value={stats.connections?.pending || 0}
+          value={safeNumber(stats.connections?.pending)}
           icon="⏳"
           trend="-3%"
           trendUp={false}
         />
       </div>
+
+      <JobControlPanel />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity */}
