@@ -28,12 +28,12 @@ export default function Sidebar({ open, setOpen }) {
         transform transition-transform duration-300 ease-in-out
         lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="flex h-16 items-center gap-3 border-b border-gray-200 px-6">
+        {/* <div className="flex h-16 items-center gap-3 border-b border-gray-200 px-6">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
             L
           </div>
           <span className="text-xl font-bold text-gray-900">LinkedIn Auto</span>
-        </div>
+        </div> */}
 
         <nav className="flex flex-col gap-1 p-4">
           {navigation.map((item) => {
