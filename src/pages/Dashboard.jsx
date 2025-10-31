@@ -4,7 +4,8 @@ import StatsCard from '../components/dashboard/StatsCard';
 import ActivityFeed from '../components/dashboard/ActivityFeed';
 import QuickActions from '../components/dashboard/QuickActions';
 import JobControlPanel from '../components/automation/JobControlPanel'; 
-
+import EngagementChart from '../components/analytics/EngagementChart';
+import ConnectionChart from '../components/analytics/ConnectionsChart';
 export default function Dashboard() {
   const [stats, setStats] = useState({
     activity: null,
@@ -98,6 +99,11 @@ export default function Dashboard() {
       </div>
 
       <JobControlPanel />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <EngagementChart />
+        <ConnectionChart />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity */}
