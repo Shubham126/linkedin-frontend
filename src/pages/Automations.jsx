@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AutomationCard from '../components/automation/AutomationCard';
 import { automation } from '../api/linkedinApi';
 
 export default function Automations() {
+  const navigate = useNavigate();
   const [currentJob, setCurrentJob] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -177,7 +179,7 @@ export default function Automations() {
         </div>
       )}
 
-      {/* Automation Cards */}
+      {/* Automation Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {automations.map((auto) => (
           <AutomationCard
@@ -187,6 +189,29 @@ export default function Automations() {
             onRefresh={checkJobStatus}
           />
         ))}
+
+        {/* Create Post Card */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
+          <div className="h-24 bg-gradient-to-r from-indigo-500 to-indigo-600 flex items-center justify-center">
+            <span className="text-6xl">✍️</span>
+          </div>
+          
+          <div className="p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Create Post
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Create, generate, and schedule LinkedIn posts with AI
+            </p>
+            
+            <button
+              onClick={() => navigate('/create-post')}
+              className="w-full py-2.5 px-4 rounded-lg text-white font-medium bg-gradient-to-r from-indigo-500 to-indigo-600 hover:opacity-90 transition-opacity"
+            >
+              Open Creator
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

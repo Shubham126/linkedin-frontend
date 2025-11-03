@@ -71,6 +71,32 @@ export const automation = {
       maxProfiles
     });
   },
+  createSinglePost: (postText, hashtags = []) => {
+    const credentials = getCredentials();
+    return api.post('/automation/create-post/single', {
+      linkedinUsername: credentials?.email,
+      linkedinPassword: credentials?.password,
+      postText,
+      hashtags
+    });
+  },
+
+  generateAIPost: (topic, options = {}) => {
+    return api.post('/automation/create-post/generate-ai', {
+      topic,
+      tone: options.tone || 'professional',
+      length: options.length || 'medium',
+      includeQuestion: options.includeQuestion !== false,
+      style: options.style || 'thought-leadership'
+    });
+  },
+
+  generateHashtags: (postText, count = 5) => {
+    return api.post('/automation/create-post/generate-hashtags', {
+      postText,
+      count
+    });
+  },
 
   getCurrentJobStatus: () =>
     api.get('/automation/job/status'),

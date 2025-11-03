@@ -8,6 +8,7 @@ import DataDashboard from './pages/DataDashboard';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
 import ControlPanel from './pages/ControlPanel';
+import CreatePost from './pages/CreatePost'; // ← Add this
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         {/* Main App - With Layout */}
         <Route path="/" element={<Layout><Dashboard /></Layout>} />
         <Route path="/automations" element={<Layout><Automations /></Layout>} />
+        <Route path="/create-post" element={<Layout><CreatePost /></Layout>} /> {/* ← Add this */}
         <Route path="/analytics" element={<Layout><Analytics /></Layout>} />
         <Route path="/data" element={<Layout><DataDashboard /></Layout>} />
         <Route path="/connections" element={<Layout><Connections /></Layout>} />
