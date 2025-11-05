@@ -1,215 +1,238 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import AutomationCard from '../components/automation/AutomationCard';
+// ==================== FILE: frontend/src/components/automation/AutomationControl.jsx ====================
+import { useState } from 'react';
 import { automation } from '../api/linkedinApi';
 
-export default function Automations() {
-  const navigate = useNavigate();
-  const [currentJob, setCurrentJob] = useState(null);
+export default function AutomationControl() {
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(null);
+  const [error, setError] = useState(null);
+  const [activeJob, setActiveJob] = useState(null);
 
-  useEffect(() => {
-    checkJobStatus();
-    
-    // Poll job status every 3 seconds
-    const interval = setInterval(checkJobStatus, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  const [config, setConfig] = useState({
+    feedEngagement: { maxPosts: 15 },
+    connectionRequests: { keyword: 'developer', maxRequests: 20 },
+    searchEngagement: { keyword: 'developer', maxPosts: 10 },
+    profileScraping: { keyword: 'developer', maxProfiles: 50 }
+  });
 
-  const checkJobStatus = async () => {
-    try {
-      const response = await automation.getCurrentJobStatus();
-      setCurrentJob(response.data.data);
-    } catch (error) {
-      console.error('Failed to check job status:', error);
-    }
-  };
-
-  const handleCancelJob = async () => {
-    if (!window.confirm('Are you sure you want to cancel the current job?')) return;
-    
+  const startAutomation = async (type) => {
     setLoading(true);
+    setError(null);
+    
     try {
-      const response = await automation.cancelCurrentJob();
-      alert(`✅ ${response.data.message}`);
-      await checkJobStatus();
-    } catch (error) {
-      alert(`❌ Failed to cancel job: ${error.response?.data?.error || error.message}`);
+      let result;
+      
+      switch(type) {
+        case 'feed':
+          result = await automation.startFeedEngagement(config.feedEngagement.maxPosts);
+          break;
+        case 'connections':
+          result = await automation.startConnectionRequests(
+            config.connectionRequests.keyword,
+            config.connectionRequests.maxRequests
+          );
+          break;
+        case 'monitor':
+          result = await automation.startMonitorConnections();
+          break;
+        case 'messages':
+          result = await automation.startWelcomeMessages();
+          break;
+        case 'search':
+          result = await automation.startSearchEngagement(
+            config.searchEngagement.keyword,
+            config.searchEngagement.maxPosts
+          );
+          break;
+        case 'scrape':
+          result = await automation.startProfileScraping(
+            config.profileScraping.keyword,
+            config.profileScraping.maxProfiles
+          );
+          break;
+        default:
+          throw new Error('Unknown automation type');
+      }
+      
+      setActiveJob(type);
+      setStatus(result.data);
+      alert('✅ Automation started successfully!');
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+      alert('❌ Error: ' + (err.response?.data?.error || err.message));
     } finally {
       setLoading(false);
     }
   };
 
-  const automations = [
-    {
-      id: 'feed-engagement',
-      name: 'Feed Engagement',
-      description: 'Automatically like and comment on your LinkedIn feed posts',
-      icon: '👍',
-      color: 'blue',
-      inputs: [
-        { name: 'maxPosts', label: 'Max Posts', type: 'number', default: 15 }
-      ],
-      action: (data) => automation.startFeedEngagement(data.maxPosts)
-    },
-    {
-      id: 'connection-requests',
-      name: 'Connection Requests',
-      description: 'Send personalized connection requests based on keywords',
-      icon: '🤝',
-      color: 'green',
-      inputs: [
-        { name: 'keyword', label: 'Keyword', type: 'text', default: 'developer' },
-        { name: 'maxRequests', label: 'Max Requests', type: 'number', default: 20 }
-      ],
-      action: (data) => automation.startConnectionRequests(data.keyword, data.maxRequests)
-    },
-    {
-      id: 'monitor-connections',
-      name: 'Monitor Connections',
-      description: 'Check and track pending connection requests',
-      icon: '👀',
-      color: 'purple',
-      inputs: [],
-      action: () => automation.startMonitorConnections()
-    },
-    {
-      id: 'welcome-messages',
-      name: 'Welcome Messages',
-      description: 'Send welcome messages to new connections',
-      icon: '💌',
-      color: 'pink',
-      inputs: [],
-      action: () => automation.startWelcomeMessages()
-    },
-    {
-      id: 'search-engagement',
-      name: 'Search Engagement',
-      description: 'Search for posts by keyword and engage with them',
-      icon: '🔍',
-      color: 'orange',
-      inputs: [
-        { name: 'keyword', label: 'Keyword', type: 'text', default: 'AI' },
-        { name: 'maxPosts', label: 'Max Posts', type: 'number', default: 10 }
-      ],
-      action: (data) => automation.startSearchEngagement(data.keyword, data.maxPosts)
-    },
-    {
-      id: 'profile-scraping',
-      name: 'Profile Scraping',
-      description: 'Extract profile data and save to Google Sheets',
-      icon: '📋',
-      color: 'cyan',
-      inputs: [
-        { name: 'keyword', label: 'Keyword', type: 'text', default: 'developer' },
-        { name: 'maxProfiles', label: 'Max Profiles', type: 'number', default: 50 }
-      ],
-      action: (data) => automation.startProfileScraping(data.keyword, data.maxProfiles)
+  const cancelAutomation = async () => {
+    try {
+      const result = await automation.cancelJob();
+      setActiveJob(null);
+      setStatus(null);
+      alert('✅ Job cancelled successfully!');
+    } catch (err) {
+      alert('❌ Error cancelling job: ' + err.message);
     }
-  ];
+  };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Automations</h1>
-        <p className="text-gray-500 mt-1">Manage and run your LinkedIn automation tasks</p>
-      </div>
-
-      {/* Current Job Status */}
-      {currentJob?.isRunning ? (
-        <div className="bg-linear-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-                <h3 className="text-lg font-semibold text-green-900">Job Running</h3>
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">🤖 Automation Control</h2>
+        
+        {activeJob && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-blue-900 font-semibold">⏳ Active Job: {activeJob}</p>
+                <p className="text-blue-700 text-sm mt-1">Status: {status?.status || 'running'}</p>
               </div>
-              
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-700">Job ID:</span>
-                  <code className="px-2 py-1 bg-white rounded border border-green-200 text-green-800 font-mono text-xs">
-                    {currentJob.jobId}
-                  </code>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-700">Script:</span>
-                  <span className="text-gray-900">{currentJob.scriptName}</span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-700">Running for:</span>
-                  <span className="text-gray-900">
-                    {Math.round(currentJob.runningFor / 1000)}s
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            <button
-              onClick={handleCancelJob}
-              disabled={loading}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <span>🛑</span>
-              {loading ? 'Cancelling...' : 'Cancel Job'}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">✅</span>
-            <p className="text-blue-900 font-medium">No job is currently running. Select an automation below to start.</p>
-          </div>
-        </div>
-      )}
-
-      {/* Warning if job is running */}
-      {currentJob?.isRunning && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex gap-2">
-            <span className="text-xl">⚠️</span>
-            <div className="text-sm">
-              <p className="font-medium text-yellow-900">Only one job can run at a time</p>
-              <p className="text-yellow-700">Please wait for the current job to complete or cancel it before starting another.</p>
+              <button
+                onClick={cancelAutomation}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                ⏹️ Cancel Job
+              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Automation Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {automations.map((auto) => (
-          <AutomationCard
-            key={auto.id}
-            automation={auto}
-            disabled={currentJob?.isRunning}
-            onRefresh={checkJobStatus}
-          />
-        ))}
-
-        {/* Create Post Card */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
-          <div className="h-24 bg-gradient-to-r from-indigo-500 to-indigo-600 flex items-center justify-center">
-            <span className="text-6xl">✍️</span>
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            ❌ {error}
           </div>
-          
-          <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Create Post
-            </h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Create, generate, and schedule LinkedIn posts with AI
-            </p>
-            
-            <button
-              onClick={() => navigate('/create-post')}
-              className="w-full py-2.5 px-4 rounded-lg text-white font-medium bg-gradient-to-r from-indigo-500 to-indigo-600 hover:opacity-90 transition-opacity"
-            >
-              Open Creator
-            </button>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Feed Engagement */}
+          <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+            <h3 className="font-semibold text-gray-900 mb-3">📊 Feed Engagement</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Max Posts</label>
+                <input
+                  type="number"
+                  value={config.feedEngagement.maxPosts}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    feedEngagement: { maxPosts: parseInt(e.target.value) }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <button
+                onClick={() => startAutomation('feed')}
+                disabled={loading || activeJob}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {loading ? '⏳ Starting...' : '▶️ Start'}
+              </button>
+            </div>
+          </div>
+
+          {/* Connection Requests */}
+          <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+            <h3 className="font-semibold text-gray-900 mb-3">🤝 Connection Requests</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Keyword</label>
+                <input
+                  type="text"
+                  value={config.connectionRequests.keyword}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    connectionRequests: { ...config.connectionRequests, keyword: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Max Requests</label>
+                <input
+                  type="number"
+                  value={config.connectionRequests.maxRequests}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    connectionRequests: { ...config.connectionRequests, maxRequests: parseInt(e.target.value) }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <button
+                onClick={() => startAutomation('connections')}
+                disabled={loading || activeJob}
+                className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              >
+                {loading ? '⏳ Starting...' : '▶️ Start'}
+              </button>
+            </div>
+          </div>
+
+          {/* Search Engagement */}
+          <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+            <h3 className="font-semibold text-gray-900 mb-3">🔍 Search Engagement</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Keyword</label>
+                <input
+                  type="text"
+                  value={config.searchEngagement.keyword}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    searchEngagement: { ...config.searchEngagement, keyword: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Max Posts</label>
+                <input
+                  type="number"
+                  value={config.searchEngagement.maxPosts}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    searchEngagement: { ...config.searchEngagement, maxPosts: parseInt(e.target.value) }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <button
+                onClick={() => startAutomation('search')}
+                disabled={loading || activeJob}
+                className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              >
+                {loading ? '⏳ Starting...' : '▶️ Start'}
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg border border-yellow-200">
+            <h3 className="font-semibold text-gray-900 mb-3">⚡ Quick Actions</h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => startAutomation('monitor')}
+                disabled={loading || activeJob}
+                className="w-full px-3 py-2 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 disabled:opacity-50"
+              >
+                👀 Monitor Connections
+              </button>
+              <button
+                onClick={() => startAutomation('messages')}
+                disabled={loading || activeJob}
+                className="w-full px-3 py-2 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 disabled:opacity-50"
+              >
+                💬 Send Messages
+              </button>
+              <button
+                onClick={() => startAutomation('scrape')}
+                disabled={loading || activeJob}
+                className="w-full px-3 py-2 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 disabled:opacity-50"
+              >
+                🔗 Scrape Profiles
+              </button>
+            </div>
           </div>
         </div>
       </div>

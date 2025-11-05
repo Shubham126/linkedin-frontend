@@ -1,3 +1,4 @@
+// ==================== FILE: frontend/src/components/layout/Navbar.jsx ====================
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -13,43 +14,67 @@ export default function Navbar({ onMenuClick }) {
   }, []);
 
   return (
-    <div className="sticky top-0 z-10 flex h-16 bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8">
-      
-
-      <div className="flex flex-1 items-center justify-between">
-        <div className="flex h-16 items-center gap-3 border-b border-gray-200 px-6">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
-            L
-          </div>
-          <span className="text-xl font-bold text-gray-900">LinkedIn Auto</span>
-        </div>
-        <div className="flex-1" />
+    <nav className="sticky top-0 z-40 w-full bg-white border-b h-16 flex items-center" style={{ borderColor: '#E6E6FA' }}>
+      <div className="flex items-center justify-between h-full px-4 sm:px-6 lg:px-8 w-full">
         
+        {/* Left Section - Logo */}
         <div className="flex items-center gap-4">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold text-white" style={{ backgroundColor: '#00008B' }}>
+              🔗
+            </div>
+            <div>
+              <h1 className="font-bold text-lg hidden sm:block" style={{ color: '#00008B' }}>
+                LinkedIn Automation
+              </h1>
+              <h1 className="font-bold text-lg sm:hidden" style={{ color: '#00008B' }}>
+                LinkedIn
+              </h1>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Section - Credentials & Settings */}
+        <div className="flex items-center gap-3 sm:gap-4">
           
           {/* LinkedIn Account Badge */}
           {credentials ? (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
-              <div className="w-2 h-2 bg-green-500 rounded-full" />
-              <span className="text-sm text-green-700 hidden sm:block">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl border transition hidden sm:flex" style={{ backgroundColor: '#E6E6FA', borderColor: '#00008B' }}>
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#00008B' }} />
+              <span className="text-sm font-medium hidden md:block" style={{ color: '#00008B' }}>
                 {credentials.email}
+              </span>
+              <span className="text-sm font-medium md:hidden" style={{ color: '#00008B' }}>
+                Connected
               </span>
             </div>
           ) : (
             <button
               onClick={() => navigate('/credentials-setup')}
-              className="px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700 hover:bg-yellow-100 transition-colors"
+              className="px-3 py-2 rounded-xl text-sm font-medium border transition hidden sm:block"
+              style={{ backgroundColor: '#FFE6E6', borderColor: '#FF6B6B', color: '#FF6B6B' }}
             >
-              ⚠️ Setup LinkedIn
+              ⚠️ Setup
             </button>
           )}
 
-          {/* User Avatar */}
-          <div className="w-10 h-10 rounded-full bg-linear-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium cursor-pointer" onClick={() => navigate('/settings')}>
+          {/* Status Indicator (Mobile) */}
+          {credentials && (
+            <div className="w-2 h-2 rounded-full sm:hidden" style={{ backgroundColor: '#00008B' }} />
+          )}
+
+          {/* User Avatar / Settings Button */}
+          <button
+            onClick={() => navigate('/settings')}
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold transition hover:shadow-md"
+            style={{ backgroundColor: '#00008B' }}
+            title="Settings"
+          >
             {credentials?.email?.[0]?.toUpperCase() || 'U'}
-          </div>
+          </button>
         </div>
       </div>
-    </div>
+    </nav>
   );
 }

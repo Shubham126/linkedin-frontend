@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { connections } from '../api/linkedinApi';
+import { logsAPI } from '../api/linkedinApi';
 
-export function useConnections(type = 'all') {
+export function useConnections(filter = 'all') {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -13,15 +13,25 @@ export function useConnections(type = 'all') {
     try {
       let response;
       
-      switch (type) {
+      switch (filter) {
         case 'pending':
-          response = await connections.getPending();
+          // Get connection_requested actions that haven't been accepted
+          response = await logsAPI.getLogsByAction('connection_requested');
           break;
+          
         case 'accepted':
-          response = await connections.getAccepted();
+          // Get connection_accepted actions
+          response = await logsAPI.getLogsByAction('connection_accepted');
           break;
+          
+        case 'messaged':
+          // Get message_sent actions
+          response = await logsAPI.getLogsByAction('message_sent');
+          break;
+          
         default:
-          response = await connections.getHistory();
+          // Get all logs
+          response = await logsAPI.getUserLogs();
       }
       
       setData(response.data.data || []);
@@ -31,7 +41,7 @@ export function useConnections(type = 'all') {
     } finally {
       setLoading(false);
     }
-  }, [type]);
+  }, [filter]);
 
   useEffect(() => {
     fetchConnections();

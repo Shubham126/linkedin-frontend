@@ -1,79 +1,120 @@
-import { useState, useCallback } from 'react';
+// ==================== FILE: frontend/src/hooks/useAutomation.js ====================
+import { useState, useCallback, useEffect } from 'react';
 import { automation } from '../api/linkedinApi';
 
 export function useAutomation() {
-  const [activeJobs, setActiveJobs] = useState([]);
+  const [activeJob, setActiveJob] = useState(null);
+  const [jobStatus, setJobStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const startAutomation = useCallback(async (automationType, params) => {
+  // Check job status on mount and periodically
+  useEffect(() => {
+    checkStatus();
+    const interval = setInterval(checkStatus, 5000); // Check every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  const startJob = useCallback(async (jobType, config = {}) => {
     setLoading(true);
     setError(null);
     
     try {
-      let response;
+      let result;
       
-      switch (automationType) {
+      switch(jobType) {
         case 'feed-engagement':
-          response = await automation.startFeedEngagement(params.maxPosts);
+          result = await automation.startFeedEngagement(config.maxPosts || 15);
           break;
         case 'connection-requests':
-          response = await automation.startConnectionRequests(params.keyword, params.maxRequests);
+          result = await automation.startConnectionRequests(
+            config.keyword || 'developer', 
+            config.maxRequests || 20
+          );
           break;
         case 'monitor-connections':
-          response = await automation.startMonitorConnections();
+          result = await automation.startMonitorConnections();
           break;
         case 'welcome-messages':
-          response = await automation.startWelcomeMessages();
+          result = await automation.startWelcomeMessages();
           break;
         case 'search-engagement':
-          response = await automation.startSearchEngagement(params.keyword, params.maxPosts);
+          result = await automation.startSearchEngagement(
+            config.keyword || 'developer', 
+            config.maxPosts || 10
+          );
           break;
         case 'profile-scraping':
-          response = await automation.startProfileScraping(params.keyword, params.maxProfiles);
+          result = await automation.startProfileScraping(
+            config.keyword || 'developer', 
+            config.maxProfiles || 50
+          );
           break;
         default:
-          throw new Error('Unknown automation type');
+          throw new Error('Unknown job type: ' + jobType);
       }
       
-      const jobId = response.data.jobId;
-      setActiveJobs(prev => [...prev, { id: jobId, type: automationType, status: 'running' }]);
-      
-      return { success: true, jobId };
+      setActiveJob(jobType);
+      setJobStatus(result.data);
+      return result.data;
     } catch (err) {
-      setError(err.message);
-      return { success: false, error: err.message };
+      const errorMsg = err.response?.data?.error || err.message;
+      setError(errorMsg);
+      console.error('Error starting job:', errorMsg);
+      throw err;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const checkJobStatus = useCallback(async (jobId) => {
+  const checkStatus = useCallback(async () => {
     try {
-      const response = await automation.getJobStatus(jobId);
-      return response.data;
+      const result = await automation.getJobStatus();
+      const status = result.data?.data || {};
+      
+      if (status.isRunning) {
+        setActiveJob(status.script || 'unknown');
+        setJobStatus(status);
+      } else {
+        if (activeJob) {
+          setActiveJob(null);
+          setJobStatus(null);
+        }
+      }
+      return status;
     } catch (err) {
-      console.error('Failed to check job status:', err);
+      console.error('Error checking status:', err.message);
+      // Don't set error for status checks to avoid spam
       return null;
     }
-  }, []);
+  }, [activeJob]);
 
-  const stopJob = useCallback(async (jobId) => {
+  const cancelJob = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      await automation.stopJob(jobId);
-      setActiveJobs(prev => prev.filter(job => job.id !== jobId));
-      return { success: true };
+      const result = await automation.cancelJob();
+      setActiveJob(null);
+      setJobStatus(null);
+      return result.data;
     } catch (err) {
-      return { success: false, error: err.message };
+      const errorMsg = err.response?.data?.error || err.message;
+      setError(errorMsg);
+      console.error('Error cancelling job:', errorMsg);
+      throw err;
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   return {
-    activeJobs,
+    activeJob,
+    jobStatus,
     loading,
     error,
-    startAutomation,
-    checkJobStatus,
-    stopJob
+    startJob,
+    checkStatus,
+    cancelJob
   };
 }

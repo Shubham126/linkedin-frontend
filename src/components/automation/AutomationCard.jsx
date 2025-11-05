@@ -1,13 +1,5 @@
+// ==================== FILE: frontend/src/components/automation/AutomationCard.jsx ====================
 import { useState } from 'react';
-
-const colorClasses = {
-  blue: 'from-blue-500 to-blue-600',
-  green: 'from-green-500 to-green-600',
-  purple: 'from-purple-500 to-purple-600',
-  pink: 'from-pink-500 to-pink-600',
-  orange: 'from-orange-500 to-orange-600',
-  cyan: 'from-cyan-500 to-cyan-600'
-};
 
 export default function AutomationCard({ automation, disabled = false, onRefresh }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,7 +14,10 @@ export default function AutomationCard({ automation, disabled = false, onRefresh
       const response = await automation.action(formData);
       setIsOpen(false);
       
-      alert(`✅ ${response.data.message}\nJob ID: ${response.data.jobId}`);
+      const message = response.data.message || 'Automation started successfully';
+      const jobId = response.data.jobId || response.data.data?.jobId || 'N/A';
+      
+      alert(`✅ ${message}\nJob ID: ${jobId}`);
       
       if (onRefresh) onRefresh();
     } catch (error) {
@@ -38,13 +33,20 @@ export default function AutomationCard({ automation, disabled = false, onRefresh
       alert('⚠️ A job is already running. Please wait or cancel it first.');
       return;
     }
+    
+    const initialData = {};
+    automation.inputs.forEach(input => {
+      initialData[input.name] = input.default;
+    });
+    setFormData(initialData);
     setIsOpen(true);
   };
 
   return (
     <>
-      <div className={`bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all ${disabled ? 'opacity-50' : ''}`}>
-        <div className={`h-24 bg-linear-to-r ${colorClasses[automation.color]} flex items-center justify-center`}>
+      <div className={`bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all ${disabled ? 'opacity-50' : ''}`}>
+        {/* Gradient Header */}
+        <div className="h-24 flex items-center justify-center" style={{ backgroundColor: automation.color }}>
           <span className="text-6xl">{automation.icon}</span>
         </div>
         
@@ -52,63 +54,99 @@ export default function AutomationCard({ automation, disabled = false, onRefresh
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             {automation.name}
           </h3>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-gray-600 mb-4">
             {automation.description}
           </p>
           
           <button
             onClick={handleOpen}
             disabled={disabled}
-            className={`w-full py-2.5 px-4 rounded-lg text-white font-medium transition-opacity ${
-              disabled 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : `bg-linear-to-r ${colorClasses[automation.color]} hover:opacity-90`
-            }`}
+            className="w-full py-2.5 px-4 rounded-xl text-white font-medium transition-all hover:shadow-md disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: disabled ? '#CCCCCC' : automation.color,
+              opacity: disabled ? 1 : 1
+            }}
           >
-            {disabled ? '🔒 Job Running' : 'Start Automation'}
+            {disabled ? '🔒 Job Running' : '▶️ Start Automation'}
           </button>
         </div>
       </div>
 
       {/* Modal */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {automation.name}
-            </h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setIsOpen(false)}>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">
+                {automation.icon} {automation.name}
+              </h2>
+              <button 
+                onClick={() => setIsOpen(false)}
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-6">
+              {automation.description}
+            </p>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              {automation.inputs.map((input) => (
-                <div key={input.name}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {input.label}
-                  </label>
-                  <input
-                    type={input.type}
-                    defaultValue={input.default}
-                    onChange={(e) => setFormData({ ...formData, [input.name]: input.type === 'number' ? parseInt(e.target.value) : e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
+              {automation.inputs.length > 0 ? (
+                automation.inputs.map((input) => (
+                  <div key={input.name}>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {input.label}
+                    </label>
+                    <input
+                      type={input.type}
+                      value={formData[input.name] || input.default}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        [input.name]: input.type === 'number' ? parseInt(e.target.value) || 0 : e.target.value 
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 transition"
+                      style={{ focusRingColor: '#00008B' }}
+                      required
+                      min={input.type === 'number' ? 1 : undefined}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Default: {input.default}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 rounded-xl border" style={{ backgroundColor: '#E6E6FA', borderColor: '#00008B' }}>
+                  <p className="text-sm" style={{ color: '#00008B' }}>
+                    ℹ️ This automation doesn't require any configuration.
+                  </p>
                 </div>
-              ))}
+              )}
               
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
                   disabled={loading}
-                  className="flex-1 py-2.5 px-4 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  className="flex-1 py-2.5 px-4 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`flex-1 py-2.5 px-4 rounded-lg text-white font-medium bg-linear-to-r ${colorClasses[automation.color]} hover:opacity-90 disabled:opacity-50`}
+                  className="flex-1 py-2.5 px-4 rounded-xl text-white font-medium hover:shadow-md disabled:opacity-50 transition-all"
+                  style={{ backgroundColor: automation.color }}
                 >
-                  {loading ? 'Starting...' : 'Start'}
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                      Starting...
+                    </span>
+                  ) : (
+                    '▶️ Start Now'
+                  )}
                 </button>
               </div>
             </form>
